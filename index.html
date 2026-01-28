@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Pupil Whiteboard</title>
+  <style>
+/* =========================
+   BASE THEME VARIABLES
+========================= */
+
+:root {
+  --bg: #f6f7fb;
+  --panel: rgba(255,255,255,0.95);
+  --panel-soft: rgba(255,255,255,0.75);
+  --ink: #0b1220;
+  --muted: rgba(11,18,32,0.65);
+  --border: rgba(11,18,32,0.15);
+  --shadow: 0 14px 40px rgba(0,0,0,0.12);
+  --shadow-soft: 0 8px 20px rgba(0,0,0,0.08);
+  --accent: #7c3aed;
+  --good: #22c55e;
+  --danger: #ef4444;
+  --radius: 18px;
+  --wb-radius: 22px;
+}
+
+/* Dark mode */
+html[data-theme="dark"] {
+  --bg: #0b1220;
+  --panel: rgba(255,255,255,0.06);
+  --panel-soft: rgba(255,255,255,0.04);
+  --ink: rgba(255,255,255,0.95);
+  --muted: rgba(255,255,255,0.65);
+  --border: rgba(255,255,255,0.16);
+  --shadow: 0 18px 50px rgba(0,0,0,0.55);
+  --shadow-soft: 0 10px 28px rgba(0,0,0,0.45);
+}
+
+/* =========================
+   GLOBAL
+========================= */
+
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 800px at 20% 10%, rgba(124,58,237,0.18), transparent 55%),
+    radial-gradient(1000px 700px at 80% 20%, rgba(14,165,233,0.15), transparent 55%),
+    var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(0,0,0,0.05), transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+.top-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* =========================
+   NAME BLOCK
+========================= */
+
+.name-block {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+.name-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.name-label {
+  font-weight: 900;
+}
+
+.name-input {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 800;
+  min-width: 220px;
+  outline: none;
+}
+
+.name-display {
+  font-weight: 1000;
+  font-size: 1.2rem;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 2px dashed var(--border);
+  background: var(--panel-soft);
+}
+
+/* Big name mode */
+.big-name .name-display {
+  font-size: 2.4rem;
+  padding: 12px 22px;
+  border-width: 3px;
+}
+
+/* =========================
+   TOOLBAR
+========================= */
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+.tool-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.divider {
+  width: 1px;
+  height: 34px;
+  background: var(--border);
+}
+
+/* Buttons */
+.btn {
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 900;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.9);
+  color: #0b1220;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+  transition: transform .08s ease, filter .12s ease;
+}
+
+html[data-theme="dark"] .btn {
+  background: rgba(255,255,255,0.08);
+  color: var(--ink);
+}
+
+.btn:hover {
+  filter: brightness(0.98);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.btn-primary {
+  border-color: var(--accent);
+  background: linear-gradient(90deg, rgba(124,58,237,0.18), rgba(14,165,233,0.16));
+}
+
+.btn-good {
+  border-color: var(--good);
+}
+
+.btn-danger {
+  border-color: var(--danger);
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.toggle-on {
+  outline: 3px solid rgba(124,58,237,0.35);
+}
+
+/* =========================
+   CONTROLS
+========================= */
+
+.control {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.range {
+  width: 120px;
+}
+
+.control-value {
+  font-weight: 900;
+}
+
+/* Colour swatches */
+.swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+}
+
+.swatch[data-col="black"] { background: #111; }
+.swatch[data-col="blue"]  { background: #2563eb; }
+.swatch[data-col="red"]   { background: #dc2626; }
+.swatch[data-col="green"] { background: #16a34a; }
+.swatch[data-col="purple"]{ background: #7c3aed; }
+
+.swatch.active {
+  outline: 3px solid var(--accent);
+}
+
+/* =========================
+   WHITEBOARD FLIP CARD
+========================= */
+
+.board-shell {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--wb-radius);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.flip-stage {
+  perspective: 1400px;
+}
+
+.flip-card {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 75vh;
+  min-height: 420px;
+  border-radius: var(--wb-radius);
+  transform-style: preserve-3d;
+  transition: transform 700ms cubic-bezier(.2,.8,.2,1);
+  position: relative;
+  box-shadow: var(--shadow);
+}
+
+.flip-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.board-side {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--wb-radius);
+  backface-visibility: hidden;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.2);
+  overflow: hidden;
+}
+
+html[data-theme="dark"] .board-side {
+  background: rgba(255,255,255,0.05);
+}
+
+.board-side.back {
+  transform: rotateY(180deg);
+}
+
+/* =========================
+   CANVAS + TEXT LAYERS
+========================= */
+
+.canvas-layer,
+.text-layer {
+  position: absolute;
+  inset: 0;
+}
+
+
+.text-layer {
+  pointer-events: none;
+}
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+/* Text boxes */
+.textBox {
+  pointer-events: auto;
+  position: absolute;
+  min-width: 120px;
+  max-width: 70%;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.85);
+  box-shadow: var(--shadow-soft);
+}
+
+html[data-theme="dark"] .textBox {
+  background: rgba(0,0,0,0.45);
+}
+
+.textBoxTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.textBox textarea {
+  width: 100%;
+  min-height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 900;
+  resize: both;
+  outline: none;
+}
+
+/* =========================
+   HELP PANEL
+========================= */
+
+.help {
+  margin-top: 12px;
+}
+
+.help-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+.help-title {
+  font-weight: 1000;
+  margin-bottom: 6px;
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.help-shortcuts {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+code {
+  background: rgba(0,0,0,0.15);
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+
+/* Mobile/touch friendliness */
+canvas{touch-action:none;}
+
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="container">
+      <div class="top-row">
+        <div class="name-block">
+          <div class="name-left">
+            <span class="name-label">🪪 Name</span>
+            <input id="nameInput" class="name-input" type="text" placeholder="Type your name (visible to teacher)" maxlength="40" />
+            <span id="nameDisplay" class="name-display">Name: (not set)</span>
+          </div>
+          <div class="tool-group">
+            <button class="btn btn-ghost" id="nameSizeBtn" type="button" title="Toggle big name (useful for thumbnails)">🔎 Big Name</button>
+          </div>
+        </div>
+
+        <div class="tools">
+          <div class="tool-group">
+            <button class="btn btn-primary toggle-on" id="penBtn" type="button" title="Draw">✏️ Pen</button>
+            <button class="btn" id="eraserBtn" type="button" title="Erase">🧽 Eraser</button>
+            <button class="btn" id="textBtn" type="button" title="Add text boxes">🔤 Text</button>
+            <button class="btn" id="lockBtn" type="button" title="Lock text boxes so you can draw without moving them">🔒 Lock</button>
+
+            <div class="divider"></div>
+
+            <div class="control" title="Pen size">
+              Pen
+              <input id="sizeRange" class="range" type="range" min="2" max="26" value="6" />
+              <span id="sizeVal" class="control-value">6</span>
+            </div>
+
+            <div class="control" title="Eraser size">
+              Erase
+              <input id="eraserRange" class="range" type="range" min="6" max="60" value="24" />
+              <span id="eraserVal" class="control-value">24</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="swatches" title="Pen colour">
+              <button class="swatch active" type="button" aria-label="Black" data-col="black"></button>
+              <button class="swatch" type="button" aria-label="Blue" data-col="blue"></button>
+              <button class="swatch" type="button" aria-label="Red" data-col="red"></button>
+              <button class="swatch" type="button" aria-label="Green" data-col="green"></button>
+              <button class="swatch" type="button" aria-label="Purple" data-col="purple"></button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="tool-group">
+            <button class="btn" id="undoBtn" type="button" title="Undo (Ctrl/Cmd+Z)">↶ Undo</button>
+            <button class="btn" id="redoBtn" type="button" title="Redo (Ctrl/Cmd+Y / Shift+Ctrl/Cmd+Z)">↷ Redo</button>
+            <button class="btn btn-danger" id="clearBtn" type="button" title="Clear this side">🧼 Clear</button>
+            <button class="btn btn-good" id="flipBtn" type="button" title="Flip to the other side">🃏 Flip</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="tool-group">
+            <button class="btn" id="saveBtn" type="button" title="Save a PNG of the current side">⬇️ Save PNG</button>
+            <label class="btn btn-ghost" title="Load a saved JSON file">
+              📂 Load PNG
+              <input id="loadInput" type="file" accept="image/png,image/*" style="display:none" />
+            </label>
+            <button class="btn btn-good" id="exportPngBtn" type="button" title="Download a PNG of the current side">⬇️ Download PNG</button>
+            <button class="btn btn-ghost" id="themeBtn" type="button" title="Toggle light/dark theme">🌗 Theme</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="board-shell">
+      <div class="flip-stage">
+        <div class="flip-card" id="flipCard">
+          <!-- FRONT -->
+          <div class="board-side front">
+            <div class="canvas-layer">
+              <canvas id="canvasFront"></canvas>
+            </div>
+            <div class="text-layer" id="textFront"></div>
+          </div>
+
+          <!-- BACK -->
+          <div class="board-side back">
+            <div class="canvas-layer">
+              <canvas id="canvasBack"></canvas>
+            </div>
+            <div class="text-layer" id="textBack"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="help">
+      <div class="help-card">
+        <div class="help-title">Classroom-friendly tips</div>
+        <ul class="help-list">
+          <li><strong>Pen</strong> draws. <strong>Eraser</strong> removes ink. <strong>Text</strong> places a draggable/resizable text box (drag by the top bar).</li>
+          <li><strong>Lock</strong> stops text boxes being edited/moved (useful once pupils have placed them).</li>
+          <li><strong>Flip</strong> gives a clean back side without losing the front.</li>
+          <li><strong>Save/Load</strong> lets pupils continue later (JSON). <strong>Download PNG</strong> exports a picture of the current side.</li>
+        </ul>
+        <div class="help-shortcuts">
+          Shortcuts (when not typing): <code>P</code>=Pen, <code>E</code>=Eraser, <code>T</code>=Text, <code>L</code>=Lock, <code>F</code>=Flip, <code>Ctrl/Cmd+Z</code>=Undo, <code>Ctrl/Cmd+Y</code>=Redo
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+/* whiteboard.js
+   Single-file implementation for the split HTML/CSS version.
+   Features:
+   - Name banner (persisted) + Big Name toggle (for NetSupport thumbnails)
+   - Light/Dark theme toggle (persisted)
+   - Pen tool with colour + size
+   - Eraser tool with size (uses canvas compositing)
+   - Text tool: click to place draggable/resizable text boxes
+   - Lock mode: disables text box interaction to prevent accidental moves while drawing
+   - Undo + Redo for strokes, erases (as strokes), text add/delete, clear
+   - Clear current side
+   - Flip board front/back with smooth transition
+   - Save/Load JSON for both sides (strokes + text boxes + settings)
+   - Export PNG for current side (canvas + text composited)
+*/
+
+(() => {
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+
+  const nameInput = $("nameInput");
+  const nameDisplay = $("nameDisplay");
+  const nameSizeBtn = $("nameSizeBtn");
+  const themeBtn = $("themeBtn");
+
+  const penBtn = $("penBtn");
+  const eraserBtn = $("eraserBtn");
+  const textBtn = $("textBtn");
+  const lockBtn = $("lockBtn");
+
+  const sizeRange = $("sizeRange");
+  const sizeVal = $("sizeVal");
+  const eraserRange = $("eraserRange");
+  const eraserVal = $("eraserVal");
+
+  const swatches = Array.from(document.querySelectorAll(".swatch"));
+
+  const undoBtn = $("undoBtn");
+  const redoBtn = $("redoBtn");
+  const clearBtn = $("clearBtn");
+  const flipBtn = $("flipBtn");
+
+  const saveBtn = $("saveBtn");
+  const loadInput = $("loadInput");
+  const exportPngBtn = $("exportPngBtn");
+
+  const flipCard = $("flipCard");
+
+  const canvasFront = $("canvasFront");
+  const canvasBack = $("canvasBack");
+  const textFront = $("textFront");
+  const textBack = $("textBack");
+
+  // ---------- State model ----------
+  const makeSide = () => ({
+    // drawing operations as "strokes"
+    // { tool:'pen'|'eraser', color, width, points:[{x,y}] }
+    strokes: [],
+    // text boxes as data objects
+    // { id, x, y, w, h, text }
+    textBoxes: [],
+    // undo/redo stacks
+    undo: [],
+    redo: []
+  });
+
+  const state = {
+    tool: "pen", // pen | eraser | text
+    active: "front", // front | back
+    lock: false,
+    penSize: 6,
+    eraserSize: 24,
+    color: "black",
+    theme: "light",
+    bigName: false,
+    name: "",
+    dpi: window.devicePixelRatio || 1,
+
+    sides: {
+      front: makeSide(),
+      back: makeSide()
+    },
+
+    ctx: {
+      front: canvasFront.getContext("2d"),
+      back: canvasBack.getContext("2d")
+    },
+
+    canv: {
+      front: canvasFront,
+      back: canvasBack
+    },
+
+    layers: {
+      front: textFront,
+      back: textBack
+    },
+
+    drawing: {
+      isDown: false,
+      stroke: null
+    }
+  };
+
+  // ---------- Persistence keys ----------
+  const KEY = {
+    name: "wb_name",
+    theme: "wb_theme",
+    bigName: "wb_big_name",
+    color: "wb_pen_color",
+    penSize: "wb_pen_size",
+    eraserSize: "wb_eraser_size"
+  };
+
+  // ---------- Theme + appearance helpers ----------
+  function setTheme(theme) {
+    state.theme = theme;
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(KEY.theme, theme);
+    renderAll();
+  }
+
+  function setBigName(on) {
+    state.bigName = on;
+    document.body.classList.toggle("big-name", on);
+    localStorage.setItem(KEY.bigName, on ? "1" : "0");
+  }
+
+  function setName(name) {
+    state.name = name;
+    localStorage.setItem(KEY.name, name);
+    nameDisplay.textContent = name ? `Name: ${name}` : "Name: (not set)";
+    document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
+  }
+
+  function penColorToRGBA(col) {
+    switch (col) {
+      case "blue": return "rgba(37,99,235,0.98)";
+      case "red": return "rgba(220,38,38,0.98)";
+      case "green": return "rgba(22,163,74,0.98)";
+      case "purple": return "rgba(124,58,237,0.98)";
+      case "black":
+      default:
+        return state.theme === "dark" ? "rgba(255,255,255,0.95)" : "rgba(17,17,17,0.95)";
+    }
+  }
+
+  function boardBG() {
+    return state.theme === "dark" ? "rgba(8,10,14,1)" : "rgba(255,255,255,1)";
+  }
+
+  // ---------- Canvas sizing ----------
+  function fitCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = state.dpi;
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+  }
+
+  function toCanvasPt(canvas, clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = state.dpi;
+    return {
+      x: (clientX - rect.left) * dpr,
+      y: (clientY - rect.top) * dpr
+    };
+  }
+
+  // ---------- Rendering ----------
+  function clearCtx(ctx, canvas) {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  function drawStroke(ctx, stroke) {
+    if (!stroke || !stroke.points || stroke.points.length < 2) return;
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = stroke.width;
+
+    if (stroke.tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0,0,0,1)";
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = stroke.color;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+    for (let i = 1; i < stroke.points.length; i++) {
+      ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function renderSide(which) {
+    const canvas = state.canv[which];
+    const ctx = state.ctx[which];
+    fitCanvas(canvas);
+
+    // Base white/black board fill for legibility
+    clearCtx(ctx, canvas);
+    ctx.save();
+    ctx.fillStyle = boardBG();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    // Rebuild strokes
+    const side = state.sides[which];
+    for (const s of side.strokes) drawStroke(ctx, s);
+
+    // Sync text DOM
+    syncTextDOM(which);
+  }
+
+  function renderAll() {
+    renderSide("front");
+    renderSide("back");
+    updateUI();
+  }
+
+  // ---------- Text boxes ----------
+  function syncTextDOM(which) {
+    const layer = state.layers[which];
+    const side = state.sides[which];
+
+    // Build map of current
+    const existing = new Map();
+    Array.from(layer.querySelectorAll(".textBox")).forEach((el) => {
+      existing.set(el.dataset.id, el);
+    });
+
+    // Create/update required
+    for (const tb of side.textBoxes) {
+      let el = existing.get(tb.id);
+      if (!el) {
+        el = createTextBoxEl(which, tb.id);
+        layer.appendChild(el);
+      }
+      el.style.left = `${tb.x}px`;
+      el.style.top = `${tb.y}px`;
+      el.style.width = `${tb.w}px`;
+
+      const ta = el.querySelector("textarea");
+      ta.style.height = `${tb.h}px`;
+      if (ta.value !== tb.text) ta.value = tb.text;
+
+      // Lock mode
+      el.classList.toggle("locked", state.lock);
+      ta.disabled = state.lock;
+      existing.delete(tb.id);
+    }
+
+    // Remove extras
+    for (const [, el] of existing.entries()) el.remove();
+  }
+
+  function createTextBoxEl(which, id) {
+    const box = document.createElement("div");
+    box.className = "textBox";
+    box.dataset.id = id;
+
+    const top = document.createElement("div");
+    top.className = "textBoxTop";
+    top.innerHTML = `<span class="chip">Text</span>`;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "xBtn";
+    del.textContent = "✕";
+    del.title = "Delete text box";
+    top.appendChild(del);
+
+    const ta = document.createElement("textarea");
+    ta.placeholder = "Type here…";
+    ta.spellcheck = false;
+
+    box.appendChild(top);
+    box.appendChild(ta);
+
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (state.lock) return;
+      const side = state.sides[which];
+      const idx = side.textBoxes.findIndex((x) => x.id === id);
+      if (idx === -1) return;
+      const removed = side.textBoxes[idx];
+      side.textBoxes.splice(idx, 1);
+
+      pushUndo(which, { type: "text_delete", payload: removed });
+      renderAll();
+    });
+
+    ta.addEventListener("input", () => {
+      if (state.lock) return;
+      const side = state.sides[which];
+      const tb = side.textBoxes.find((x) => x.id === id);
+      if (tb) tb.text = ta.value;
+    });
+
+    // Resize persistence
+    const ro = new ResizeObserver(() => {
+      const side = state.sides[which];
+      const tb = side.textBoxes.find((x) => x.id === id);
+      if (!tb) return;
+      const rect = box.getBoundingClientRect();
+      tb.w = rect.width;
+      tb.h = ta.getBoundingClientRect().height;
+    });
+    ro.observe(box);
+
+    // Dragging by top bar
+    let drag = null;
+    top.addEventListener("pointerdown", (e) => {
+      if (state.lock) return;
+      e.preventDefault();
+      const layerRect = state.layers[which].getBoundingClientRect();
+      const rect = box.getBoundingClientRect();
+      drag = {
+        pid: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startLeft: rect.left - layerRect.left,
+        startTop: rect.top - layerRect.top
+      };
+      top.setPointerCapture(e.pointerId);
+    });
+
+    top.addEventListener("pointermove", (e) => {
+      if (!drag || state.lock) return;
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      const newLeft = drag.startLeft + dx;
+      const newTop = drag.startTop + dy;
+      box.style.left = `${newLeft}px`;
+      box.style.top = `${newTop}px`;
+
+      const side = state.sides[which];
+      const tb = side.textBoxes.find((x) => x.id === id);
+      if (tb) {
+        tb.x = newLeft;
+        tb.y = newTop;
+      }
+    });
+
+    const endDrag = () => { drag = null; };
+    top.addEventListener("pointerup", endDrag);
+    top.addEventListener("pointercancel", endDrag);
+
+    return box;
+  }
+
+  function addTextBox(which, x, y) {
+    const side = state.sides[which];
+    const id = "tb_" + Math.random().toString(36).slice(2, 10);
+    const tb = {
+      id,
+      x: Math.max(8, x),
+      y: Math.max(8, y),
+      w: 260,
+      h: 70,
+      text: ""
+    };
+    side.textBoxes.push(tb);
+    pushUndo(which, { type: "text_add", payload: tb });
+    renderAll();
+
+    // Focus it
+    const el = state.layers[which].querySelector(`.textBox[data-id="${id}"] textarea`);
+    if (el && !state.lock) el.focus();
+  }
+
+  // ---------- Undo/Redo core ----------
+  function pushUndo(which, action) {
+    const side = state.sides[which];
+    side.undo.push(action);
+    side.redo.length = 0; // clear redo on new action
+  }
+
+  function applyUndo(which) {
+    const side = state.sides[which];
+    const action = side.undo.pop();
+    if (!action) return;
+
+    // Move to redo stack by storing inverse info as needed
+    if (action.type === "stroke_add") {
+      // remove last stroke
+      const removed = side.strokes.pop();
+      side.redo.push({ type: "stroke_add", payload: removed });
+    } else if (action.type === "text_add") {
+      // remove the text box
+      const id = action.payload.id;
+      const idx = side.textBoxes.findIndex((t) => t.id === id);
+      const removed = idx !== -1 ? side.textBoxes.splice(idx, 1)[0] : null;
+      side.redo.push({ type: "text_add", payload: removed || action.payload });
+    } else if (action.type === "text_delete") {
+      // restore deleted
+      side.textBoxes.push(action.payload);
+      side.redo.push({ type: "text_delete", payload: action.payload });
+    } else if (action.type === "clear") {
+      // restore snapshot
+      const snap = action.payload;
+      const currentSnap = snapshotSide(side);
+      side.strokes = snap.strokes;
+      side.textBoxes = snap.textBoxes;
+      side.redo.push({ type: "clear", payload: currentSnap });
+    }
+
+    renderAll();
+  }
+
+  function applyRedo(which) {
+    const side = state.sides[which];
+    const action = side.redo.pop();
+    if (!action) return;
+
+    if (action.type === "stroke_add") {
+      side.strokes.push(action.payload);
+      side.undo.push({ type: "stroke_add", payload: action.payload });
+    } else if (action.type === "text_add") {
+      side.textBoxes.push(action.payload);
+      side.undo.push({ type: "text_add", payload: action.payload });
+    } else if (action.type === "text_delete") {
+      // delete again
+      const id = action.payload.id;
+      const idx = side.textBoxes.findIndex((t) => t.id === id);
+      if (idx !== -1) side.textBoxes.splice(idx, 1);
+      side.undo.push({ type: "text_delete", payload: action.payload });
+    } else if (action.type === "clear") {
+      const snap = action.payload;
+      const currentSnap = snapshotSide(side);
+      side.strokes = snap.strokes;
+      side.textBoxes = snap.textBoxes;
+      side.undo.push({ type: "clear", payload: currentSnap });
+    }
+
+    renderAll();
+  }
+
+  function snapshotSide(side) {
+    return {
+      strokes: side.strokes.map((s) => ({
+        tool: s.tool,
+        color: s.color,
+        width: s.width,
+        points: s.points.map((p) => ({ x: p.x, y: p.y }))
+      })),
+      textBoxes: side.textBoxes.map((t) => ({ ...t }))
+    };
+  }
+
+  // ---------- Drawing logic ----------
+  function beginStroke(canvas, which, pt) {
+    state.active = which;
+    const side = state.sides[which];
+
+    const tool = state.tool;
+    const stroke = {
+      tool,
+      color: tool === "pen" ? penColorToRGBA(state.color) : "rgba(0,0,0,1)",
+      width: (tool === "pen" ? state.penSize : state.eraserSize) * state.dpi,
+      points: [pt]
+    };
+
+    state.drawing.isDown = true;
+    state.drawing.stroke = stroke;
+
+    // incremental draw will happen in move
+    // but ensure we have a render base (background) at least
+    // (renderSide already keeps it)
+  }
+
+  function extendStroke(which, pt) {
+    if (!state.drawing.isDown || !state.drawing.stroke) return;
+    const stroke = state.drawing.stroke;
+    stroke.points.push(pt);
+
+    // incremental draw for responsiveness
+    const ctx = state.ctx[which];
+    const n = stroke.points.length;
+    if (n < 2) return;
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = stroke.width;
+
+    if (stroke.tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0,0,0,1)";
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = stroke.color;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(stroke.points[n - 2].x, stroke.points[n - 2].y);
+    ctx.lineTo(stroke.points[n - 1].x, stroke.points[n - 1].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function endStroke(which) {
+    if (!state.drawing.isDown || !state.drawing.stroke) return;
+
+    const side = state.sides[which];
+    const stroke = state.drawing.stroke;
+
+    state.drawing.isDown = false;
+    state.drawing.stroke = null;
+
+    if (stroke.points.length > 1) {
+      side.strokes.push(stroke);
+      pushUndo(which, { type: "stroke_add", payload: stroke });
+    } else {
+      // tiny click: redraw whole side to avoid a stray point
+      renderSide(which);
+    }
+  }
+
+  function attachCanvas(canvas, which) {
+    canvas.addEventListener("pointerdown", (e) => {
+      // if text tool: place text box
+      if (state.tool === "text") {
+        if (state.lock) return;
+        state.active = which;
+        const rect = canvas.getBoundingClientRect();
+        const xPx = e.clientX - rect.left;
+        const yPx = e.clientY - rect.top;
+        addTextBox(which, xPx, yPx);
+        return;
+      }
+
+      state.active = which;
+      canvas.setPointerCapture(e.pointerId);
+
+      const pt = toCanvasPt(canvas, e.clientX, e.clientY);
+      beginStroke(canvas, which, pt);
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!state.drawing.isDown) return;
+      const pt = toCanvasPt(canvas, e.clientX, e.clientY);
+      extendStroke(which, pt);
+    });
+
+    const finish = () => endStroke(which);
+    canvas.addEventListener("pointerup", finish);
+    canvas.addEventListener("pointercancel", finish);
+    canvas.addEventListener("pointerleave", finish);
+  }
+
+  attachCanvas(canvasFront, "front");
+  attachCanvas(canvasBack, "back");
+
+  // ---------- Tools + UI ----------
+  function setTool(tool) {
+    state.tool = tool;
+    penBtn.classList.toggle("toggle-on", tool === "pen");
+    eraserBtn.classList.toggle("toggle-on", tool === "eraser");
+    textBtn.classList.toggle("toggle-on", tool === "text");
+
+    // Cursor
+    const cur =
+      tool === "text" ? "text" :
+      tool === "eraser" ? "cell" :
+      "crosshair";
+    canvasFront.style.cursor = cur;
+    canvasBack.style.cursor = cur;
+  }
+
+  function setLock(on) {
+    state.lock = on;
+    lockBtn.classList.toggle("toggle-on", on);
+    lockBtn.textContent = on ? "🔓 Unlock" : "🔒 Lock";
+    renderAll();
+  }
+
+  function setColor(col) {
+    state.color = col;
+    localStorage.setItem(KEY.color, col);
+    swatches.forEach((b) => b.classList.toggle("active", b.dataset.col === col));
+  }
+
+  function updateUI() {
+    sizeVal.textContent = String(state.penSize);
+    eraserVal.textContent = String(state.eraserSize);
+
+    // active swatch highlight
+    swatches.forEach((b) => b.classList.toggle("active", b.dataset.col === state.color));
+
+    // lock label
+    lockBtn.textContent = state.lock ? "🔓 Unlock" : "🔒 Lock";
+
+    // tool highlight is handled by setTool
+  }
+
+  // ---------- Buttons wiring ----------
+  penBtn.addEventListener("click", () => setTool("pen"));
+  eraserBtn.addEventListener("click", () => setTool("eraser"));
+  textBtn.addEventListener("click", () => setTool("text"));
+
+  lockBtn.addEventListener("click", () => setLock(!state.lock));
+
+  sizeRange.addEventListener("input", () => {
+    state.penSize = Number(sizeRange.value);
+    localStorage.setItem(KEY.penSize, String(state.penSize));
+    updateUI();
+  });
+
+  eraserRange.addEventListener("input", () => {
+    state.eraserSize = Number(eraserRange.value);
+    localStorage.setItem(KEY.eraserSize, String(state.eraserSize));
+    updateUI();
+  });
+
+  swatches.forEach((b) => b.addEventListener("click", () => setColor(b.dataset.col)));
+
+  undoBtn.addEventListener("click", () => applyUndo(state.active));
+  redoBtn.addEventListener("click", () => applyRedo(state.active));
+
+  clearBtn.addEventListener("click", () => {
+    const side = state.sides[state.active];
+    const snap = snapshotSide(side);
+    pushUndo(state.active, { type: "clear", payload: snap });
+    side.strokes = [];
+    side.textBoxes = [];
+    renderAll();
+  });
+
+  flipBtn.addEventListener("click", () => {
+    const flipped = flipCard.classList.toggle("flipped");
+    state.active = flipped ? "back" : "front";
+    // render to keep crisp after transform
+    setTimeout(renderAll, 40);
+  });
+
+  themeBtn.addEventListener("click", () => {
+    const next = state.theme === "dark" ? "light" : "dark";
+    setTheme(next);
+  });
+
+  nameSizeBtn.addEventListener("click", () => {
+    setBigName(!state.bigName);
+    nameSizeBtn.textContent = state.bigName ? "🔎 Normal Name" : "🔎 Big Name";
+  });
+
+  nameInput.addEventListener("input", () => setName(nameInput.value.trim()));
+
+  // ---------- Save / Load (PNG) ----------
+  function exportCurrentPng() {
+    exportPngBtn.click();
+  }
+
+  // Save PNG (same as Export PNG)
+  saveBtn.addEventListener("click", () => exportCurrentPng());
+
+  // Load PNG onto current side (raster import)
+  loadInput.addEventListener("change", async () => {
+    const file = loadInput.files && loadInput.files[0];
+    if (!file) return;
+
+    try {
+      const which = state.active;
+      const canvas = state.canv[which];
+      const ctx = state.ctx[which];
+
+      // Ensure canvas is sized correctly
+      fitCanvas(canvas);
+
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        // Clear model (PNG is raster; we treat it as a new base)
+        const side = state.sides[which];
+        side.strokes = [];
+        side.textBoxes = [];
+        side.undo = [];
+        side.redo = [];
+
+        // Clear and draw the image to fill the board
+        clearCtx(ctx, canvas);
+        ctx.save();
+        ctx.fillStyle = boardBG();
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        // Draw image stretched to board size (simple + predictable for pupils)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Remove any text DOM
+        syncTextDOM(which);
+
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        alert("Couldn't load that image.");
+      };
+      img.src = url;
+
+    } catch (err) {
+      console.error(err);
+      alert("Couldn't load that PNG.");
+    } finally {
+      loadInput.value = "";
+    }
+  });
+
+  // ---------- Export PNG (canvas + text composited) ----------
+
+  exportPngBtn.addEventListener("click", () => {
+    const which = state.active;
+    const canvas = state.canv[which];
+    const base = state.ctx[which];
+
+    // Create an offscreen canvas at same resolution
+    const out = document.createElement("canvas");
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const octx = out.getContext("2d");
+
+    // Draw base
+    octx.drawImage(canvas, 0, 0);
+
+    // Draw text boxes by converting DOM positions to DPR coords
+    const layer = state.layers[which];
+    const layerRect = layer.getBoundingClientRect();
+
+    const boxes = Array.from(layer.querySelectorAll(".textBox"));
+    octx.save();
+    octx.textBaseline = "top";
+
+    for (const box of boxes) {
+      const id = box.dataset.id;
+      const tb = state.sides[which].textBoxes.find((t) => t.id === id);
+      if (!tb) continue;
+
+      const padding = 10 * state.dpi;
+      const x = tb.x * state.dpi;
+      const y = tb.y * state.dpi;
+      const w = tb.w * state.dpi;
+
+      // draw bubble
+      octx.fillStyle = state.theme === "dark" ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.92)";
+      octx.strokeStyle = state.theme === "dark" ? "rgba(255,255,255,0.20)" : "rgba(11,18,32,0.18)";
+      roundRect(octx, x, y, w, (tb.h + 34) * state.dpi, 14 * state.dpi);
+      octx.fill();
+      octx.stroke();
+
+      // draw text
+      const text = (tb.text || "").trim();
+      if (text) {
+        octx.fillStyle = state.theme === "dark" ? "rgba(255,255,255,0.95)" : "rgba(11,18,32,0.95)";
+        octx.font = `${18 * state.dpi}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
+        drawWrappedText(octx, text, x + padding, y + (24 * state.dpi), w - (2 * padding), 24 * state.dpi);
+      }
+    }
+
+    // Stamp name at top-left for screenshots (helpful in exports)
+    const stamp = state.name ? `Name: ${state.name}` : "";
+    if (stamp) {
+      octx.fillStyle = state.theme === "dark" ? "rgba(255,255,255,0.9)" : "rgba(11,18,32,0.8)";
+      octx.font = `${16 * state.dpi}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
+      octx.fillText(stamp, 18 * state.dpi, 14 * state.dpi);
+    }
+
+    octx.restore();
+
+    out.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const safeName = (state.name || "pupil").replace(/[^\w\-]+/g, "_").slice(0, 20);
+      a.href = url;
+      a.download = `whiteboard_${safeName}_${which}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  });
+
+  function roundRect(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(/\s+/);
+    let line = "";
+    let yy = y;
+
+    for (let i = 0; i < words.length; i++) {
+      const test = line ? line + " " + words[i] : words[i];
+      const w = ctx.measureText(test).width;
+      if (w > maxWidth && line) {
+        ctx.fillText(line, x, yy);
+        line = words[i];
+        yy += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, x, yy);
+  }
+
+  // ---------- Keyboard shortcuts ----------
+  window.addEventListener("keydown", (e) => {
+    // avoid interfering when typing in a text box
+    const activeTag = document.activeElement && document.activeElement.tagName;
+    const typing = activeTag === "TEXTAREA" || activeTag === "INPUT";
+    const key = e.key.toLowerCase();
+
+    if ((e.ctrlKey || e.metaKey) && key === "z") {
+      e.preventDefault();
+      applyUndo(state.active);
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (key === "y" || (e.shiftKey && key === "z"))) {
+      e.preventDefault();
+      applyRedo(state.active);
+      return;
+    }
+
+    if (typing) return;
+
+    if (key === "p") setTool("pen");
+    if (key === "e") setTool("eraser");
+    if (key === "t") setTool("text");
+    if (key === "f") flipBtn.click();
+    if (key === "l") setLock(!state.lock);
+  });
+
+  // ---------- Resize handling ----------
+  window.addEventListener("resize", () => {
+    // Re-render on resize to keep crisp
+    renderAll();
+  });
+
+  // ---------- Init from localStorage ----------
+  function init() {
+    const savedTheme = localStorage.getItem(KEY.theme);
+    setTheme(savedTheme === "dark" ? "dark" : "light");
+
+    const savedName = localStorage.getItem(KEY.name) || "";
+    nameInput.value = savedName;
+    setName(savedName);
+
+    const big = localStorage.getItem(KEY.bigName) === "1";
+    setBigName(big);
+    nameSizeBtn.textContent = state.bigName ? "🔎 Normal Name" : "🔎 Big Name";
+
+    const col = localStorage.getItem(KEY.color) || "black";
+    setColor(col);
+
+    const ps = Number(localStorage.getItem(KEY.penSize) || "6");
+    state.penSize = Number.isFinite(ps) ? ps : 6;
+    sizeRange.value = String(state.penSize);
+
+    const es = Number(localStorage.getItem(KEY.eraserSize) || "24");
+    state.eraserSize = Number.isFinite(es) ? es : 24;
+    eraserRange.value = String(state.eraserSize);
+
+    sizeVal.textContent = String(state.penSize);
+    eraserVal.textContent = String(state.eraserSize);
+
+    // default tool
+    setTool("pen");
+
+    renderAll();
+  }
+
+  init();
+})();
+
+  </script>
+</body>
+</html>
