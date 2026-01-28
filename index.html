@@ -120,6 +120,23 @@ body {
   outline: none;
 }
 
+/* Merged name: the input doubles as the visible banner */
+.name-merged{
+  font-weight: 1000;
+  font-size: 1.2rem;
+  padding: 6px 14px;
+  border: 2px dashed var(--border);
+  background: var(--panel-soft);
+  min-width: 260px;
+}
+
+.big-name .name-merged{
+  font-size: 2.4rem;
+  padding: 12px 22px;
+  border-width: 3px;
+}
+
+
 .name-display {
   font-weight: 1000;
   font-size: 1.2rem;
@@ -417,8 +434,7 @@ canvas{touch-action:none;}
         <div class="name-block">
           <div class="name-left">
             <span class="name-label">🪪 Name</span>
-            <input id="nameInput" class="name-input" type="text" placeholder="Type your name (visible to teacher)" maxlength="40" />
-            <span id="nameDisplay" class="name-display">Name: (not set)</span>
+            <input id="nameInput" class="name-input name-merged" type="text" placeholder="Name (tap/click to type)" maxlength="40" />
           </div>
           <div class="tool-group">
             <button class="btn btn-ghost" id="nameSizeBtn" type="button" title="Toggle big name (useful for thumbnails)">🔎 Big Name</button>
@@ -430,7 +446,7 @@ canvas{touch-action:none;}
             <button class="btn btn-primary toggle-on" id="penBtn" type="button" title="Draw">✏️ Pen</button>
             <button class="btn" id="eraserBtn" type="button" title="Erase">🧽 Eraser</button>
             <button class="btn" id="textBtn" type="button" title="Add text boxes">🔤 Text</button>
-            <button class="btn" id="lockBtn" type="button" title="Lock text boxes so you can draw without moving them">🔒 Lock</button>
+            <button class="btn" id="lockBtn" type="button" title="Lock text so text boxes can’t be moved/edited">🔒 Lock text</button>
 
             <div class="divider"></div>
 
@@ -470,11 +486,11 @@ canvas{touch-action:none;}
 
           <div class="tool-group">
             <button class="btn" id="saveBtn" type="button" title="Save a PNG of the current side">⬇️ Save PNG</button>
-            <label class="btn btn-ghost" title="Load a saved JSON file">
-              📂 Load PNG
+            <label class="btn btn-ghost" title="Open a saved PNG image">
+              📂 Open PNG
               <input id="loadInput" type="file" accept="image/png,image/*" style="display:none" />
             </label>
-            <button class="btn btn-ghost" id="themeBtn" type="button" title="Toggle light/dark theme">🌗 Theme</button>
+<button class="btn btn-ghost" id="themeBtn" type="button" title="Toggle light/dark theme">🌗 Theme</button>
           </div>
         </div>
       </div>
@@ -511,7 +527,7 @@ canvas{touch-action:none;}
           <li><strong>Pen</strong> draws. <strong>Eraser</strong> removes ink. <strong>Text</strong> places a draggable/resizable text box (drag by the top bar).</li>
           <li><strong>Lock</strong> stops text boxes being edited/moved (useful once pupils have placed them).</li>
           <li><strong>Flip</strong> gives a clean back side without losing the front.</li>
-          <li><strong>Save/Load</strong> lets pupils continue later (JSON). 
+          <li><strong>Save PNG</strong> downloads a picture of the current side. <strong>Open PNG</strong> loads a saved picture onto the current side (then you can draw on top).</li>
         </ul>
         <div class="help-shortcuts">
           Shortcuts (when not typing): <code>P</code>=Pen, <code>E</code>=Eraser, <code>T</code>=Text, <code>L</code>=Lock, <code>F</code>=Flip, <code>Ctrl/Cmd+Z</code>=Undo, <code>Ctrl/Cmd+Y</code>=Redo
@@ -533,7 +549,7 @@ canvas{touch-action:none;}
    - Undo + Redo for strokes, erases (as strokes), text add/delete, clear
    - Clear current side
    - Flip board front/back with smooth transition
-   - Save/Load JSON for both sides (strokes + text boxes + settings)
+   - Save/Open JSON for both sides (strokes + text boxes + settings)
    - Export PNG for current side (canvas + text composited)
 */
 
@@ -542,7 +558,6 @@ canvas{touch-action:none;}
   const $ = (id) => document.getElementById(id);
 
   const nameInput = $("nameInput");
-  const nameDisplay = $("nameDisplay");
   const nameSizeBtn = $("nameSizeBtn");
   const themeBtn = $("themeBtn");
 
@@ -565,7 +580,6 @@ canvas{touch-action:none;}
 
   const saveBtn = $("saveBtn");
   const loadInput = $("loadInput");
-  const exportPngBtn = $("exportPngBtn");
 
   const flipCard = $("flipCard");
 
@@ -652,8 +666,8 @@ canvas{touch-action:none;}
   function setName(name) {
     state.name = name;
     localStorage.setItem(KEY.name, name);
-    nameDisplay.textContent = name ? `Name: ${name}` : "Name: (not set)";
-    document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
+    nameInput.value = name;
+document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
   }
 
   function penColorToRGBA(col) {
@@ -1103,7 +1117,7 @@ canvas{touch-action:none;}
   function setLock(on) {
     state.lock = on;
     lockBtn.classList.toggle("toggle-on", on);
-    lockBtn.textContent = on ? "🔓 Unlock" : "🔒 Lock";
+    lockBtn.textContent = on ? "🔓 Unlock text" : "🔒 Lock text";
     renderAll();
   }
 
@@ -1121,7 +1135,7 @@ canvas{touch-action:none;}
     swatches.forEach((b) => b.classList.toggle("active", b.dataset.col === state.color));
 
     // lock label
-    lockBtn.textContent = state.lock ? "🔓 Unlock" : "🔒 Lock";
+    lockBtn.textContent = state.lock ? "🔓 Unlock text" : "🔒 Lock text";
 
     // tool highlight is handled by setTool
   }
@@ -1180,68 +1194,7 @@ canvas{touch-action:none;}
 
   // ---------- Save / Load (PNG) ----------
   function exportCurrentPng() {
-    exportPngBtn.click();
-  }
-
-  // Save PNG (same as Export PNG)
-  saveBtn.addEventListener("click", () => exportCurrentPng());
-
-  // Load PNG onto current side (raster import)
-  loadInput.addEventListener("change", async () => {
-    const file = loadInput.files && loadInput.files[0];
-    if (!file) return;
-
-    try {
-      const which = state.active;
-      const canvas = state.canv[which];
-      const ctx = state.ctx[which];
-
-      // Ensure canvas is sized correctly
-      fitCanvas(canvas);
-
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        // Clear model (PNG is raster; we treat it as a new base)
-        const side = state.sides[which];
-        side.strokes = [];
-        side.textBoxes = [];
-        side.undo = [];
-        side.redo = [];
-
-        // Clear and draw the image to fill the board
-        clearCtx(ctx, canvas);
-        ctx.save();
-        ctx.fillStyle = boardBG();
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();
-
-        // Draw image stretched to board size (simple + predictable for pupils)
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        // Remove any text DOM
-        syncTextDOM(which);
-
-        URL.revokeObjectURL(url);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        alert("Couldn't load that image.");
-      };
-      img.src = url;
-
-    } catch (err) {
-      console.error(err);
-      alert("Couldn't load that PNG.");
-    } finally {
-      loadInput.value = "";
-    }
-  });
-
-  // ---------- Export PNG (canvas + text composited) ----------
-
-  exportPngBtn.addEventListener("click", () => {
-    const which = state.active;
+const which = state.active;
     const canvas = state.canv[which];
     const base = state.ctx[which];
 
@@ -1310,7 +1263,64 @@ canvas{touch-action:none;}
       a.remove();
       URL.revokeObjectURL(url);
     }, "image/png");
+  }
+
+  // Save PNG (same as Export PNG)
+  saveBtn.addEventListener("click", () => exportCurrentPng());
+
+  // Load PNG onto current side (raster import)
+  loadInput.addEventListener("change", async () => {
+    const file = loadInput.files && loadInput.files[0];
+    if (!file) return;
+
+    try {
+      const which = state.active;
+      const canvas = state.canv[which];
+      const ctx = state.ctx[which];
+
+      // Ensure canvas is sized correctly
+      fitCanvas(canvas);
+
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        // Clear model (PNG is raster; we treat it as a new base)
+        const side = state.sides[which];
+        side.strokes = [];
+        side.textBoxes = [];
+        side.undo = [];
+        side.redo = [];
+
+        // Clear and draw the image to fill the board
+        clearCtx(ctx, canvas);
+        ctx.save();
+        ctx.fillStyle = boardBG();
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        // Draw image stretched to board size (simple + predictable for pupils)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Remove any text DOM
+        syncTextDOM(which);
+
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        alert("Couldn't load that image.");
+      };
+      img.src = url;
+
+    } catch (err) {
+      console.error(err);
+      alert("Couldn't load that PNG.");
+    } finally {
+      loadInput.value = "";
+    }
   });
+
+  // ---------- Export PNG (canvas + text composited) ----------
 
   function roundRect(ctx, x, y, w, h, r) {
     const rr = Math.min(r, w/2, h/2);
