@@ -208,6 +208,12 @@ html[data-theme="dark"] .btn {
   transform: translateY(1px) scale(0.99);
 }
 
+.btn.disabled{
+  opacity: .55;
+  filter: grayscale(0.2);
+  pointer-events: none;
+}
+
 .btn-primary {
   border-color: var(--accent);
   background: linear-gradient(90deg, rgba(124,58,237,0.18), rgba(14,165,233,0.16));
@@ -348,13 +354,15 @@ canvas {
 .textBox {
   pointer-events: auto;
   position: absolute;
-  min-width: 120px;
+  min-width: 140px;
   max-width: 70%;
   padding: 8px 10px;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.85);
   box-shadow: var(--shadow-soft);
+  resize: both;
+  overflow: auto; /* keeps the resize handle attached to the box */
 }
 
 html[data-theme="dark"] .textBox {
@@ -370,15 +378,46 @@ html[data-theme="dark"] .textBox {
   margin-bottom: 6px;
 }
 
+
+.textBoxTop .chip{
+  display:inline-block;
+  font-size: .82rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(124,58,237,0.14);
+  border: 1px solid rgba(124,58,237,0.22);
+  font-weight: 900;
+  min-width: 40px;
+}
+.textBoxTop .chip[contenteditable="true"]{
+  cursor: text;
+  outline: none;
+}
+.textBoxTop .chip:empty::before{
+  content: "Text";
+  opacity: .7;
+}
+.xBtn{
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.7);
+  font-weight: 1000;
+}
+html[data-theme="dark"] .xBtn{
+  background: rgba(255,255,255,0.10);
+  color: var(--ink);
+}
 .textBox textarea {
   width: 100%;
-  min-height: 36px;
+  min-height: 60px;
   border: none;
   background: transparent;
   color: var(--ink);
   font-weight: 900;
-  resize: both;
   outline: none;
+  resize: none; /* resizing is on the box, not the textarea */
 }
 
 /* =========================
@@ -446,7 +485,7 @@ canvas{touch-action:none;}
             <button class="btn btn-primary toggle-on" id="penBtn" type="button" title="Draw">✏️ Pen</button>
             <button class="btn" id="eraserBtn" type="button" title="Erase">🧽 Eraser</button>
             <button class="btn" id="textBtn" type="button" title="Add text boxes">🔤 Text</button>
-            <button class="btn" id="lockBtn" type="button" title="Lock text so text boxes can’t be moved/edited">🔒 Lock text</button>
+            <button class="btn" id="lockBtn" type="button" title="Lock the board (only Save PNG + Flip stay available)">🔒 Lock board</button>
 
             <div class="divider"></div>
 
@@ -486,7 +525,7 @@ canvas{touch-action:none;}
 
           <div class="tool-group">
             <button class="btn" id="saveBtn" type="button" title="Save a PNG of the current side">⬇️ Save PNG</button>
-            <label class="btn btn-ghost" title="Open a saved PNG image">
+            <label class="btn btn-ghost" id="openLabel" title="Open a saved PNG image">
               📂 Open PNG
               <input id="loadInput" type="file" accept="image/png,image/*" style="display:none" />
             </label>
@@ -525,12 +564,12 @@ canvas{touch-action:none;}
         <div class="help-title">Classroom-friendly tips</div>
         <ul class="help-list">
           <li><strong>Pen</strong> draws. <strong>Eraser</strong> removes ink. <strong>Text</strong> places a draggable/resizable text box (drag by the top bar).</li>
-          <li><strong>Lock</strong> stops text boxes being edited/moved (useful once pupils have placed them).</li>
+          <li><strong>Lock board</strong> freezes everything except <strong>Save PNG</strong> and <strong>Flip</strong> (useful when you want pupils to stop editing).</li>
           <li><strong>Flip</strong> gives a clean back side without losing the front.</li>
           <li><strong>Save PNG</strong> downloads a picture of the current side. <strong>Open PNG</strong> loads a saved picture onto the current side (then you can draw on top).</li>
         </ul>
         <div class="help-shortcuts">
-          Shortcuts (when not typing): <code>P</code>=Pen, <code>E</code>=Eraser, <code>T</code>=Text, <code>L</code>=Lock, <code>F</code>=Flip, <code>Ctrl/Cmd+Z</code>=Undo, <code>Ctrl/Cmd+Y</code>=Redo
+          Shortcuts (when not typing): <code>P</code>=Pen, <code>E</code>=Eraser, <code>T</code>=Text, <code>L</code>=Lock board, <code>F</code>=Flip, <code>Ctrl/Cmd+Z</code>=Undo, <code>Ctrl/Cmd+Y</code>=Redo
         </div>
       </div>
     </section>
@@ -560,6 +599,7 @@ canvas{touch-action:none;}
   const nameInput = $("nameInput");
   const nameSizeBtn = $("nameSizeBtn");
   const themeBtn = $("themeBtn");
+  const openLabel = $("openLabel");
 
   const penBtn = $("penBtn");
   const eraserBtn = $("eraserBtn");
@@ -785,14 +825,18 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
       el.style.left = `${tb.x}px`;
       el.style.top = `${tb.y}px`;
       el.style.width = `${tb.w}px`;
+      el.style.height = `${tb.h}px`;
+
+      const chip = el.querySelector(".chip");
+      if (chip && chip.textContent !== (tb.label || "")) chip.textContent = tb.label || "";
 
       const ta = el.querySelector("textarea");
-      ta.style.height = `${tb.h}px`;
       if (ta.value !== tb.text) ta.value = tb.text;
 
-      // Lock mode
+      // Lock mode (locks text boxes to prevent accidental edits/moves)
       el.classList.toggle("locked", state.lock);
       ta.disabled = state.lock;
+      if (chip) chip.contentEditable = state.lock ? "false" : "true";
       existing.delete(tb.id);
     }
 
@@ -807,7 +851,7 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
 
     const top = document.createElement("div");
     top.className = "textBoxTop";
-    top.innerHTML = `<span class="chip">Text</span>`;
+    top.innerHTML = `<span class="chip" contenteditable="true" spellcheck="false"></span>`;
 
     const del = document.createElement("button");
     del.type = "button";
@@ -815,6 +859,9 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
     del.textContent = "✕";
     del.title = "Delete text box";
     top.appendChild(del);
+
+    // Ensure the delete button works even though the top bar supports dragging
+    del.addEventListener("pointerdown", (e) => e.stopPropagation());
 
     const ta = document.createElement("textarea");
     ta.placeholder = "Type here…";
@@ -843,6 +890,24 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
       if (tb) tb.text = ta.value;
     });
 
+    const chip = top.querySelector(".chip");
+
+    // Editable label in the top bar (pupils can overwrite "Text")
+    chip.addEventListener("input", () => {
+      if (state.lock) return;
+      const side = state.sides[which];
+      const tb = side.textBoxes.find((x) => x.id === id);
+      if (tb) tb.label = (chip.textContent || "").trim();
+    });
+
+    chip.addEventListener("keydown", (e) => {
+      // Prevent newlines inside the label
+      if (e.key === "Enter") {
+        e.preventDefault();
+        chip.blur();
+      }
+    });
+
     // Resize persistence
     const ro = new ResizeObserver(() => {
       const side = state.sides[which];
@@ -850,7 +915,7 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
       if (!tb) return;
       const rect = box.getBoundingClientRect();
       tb.w = rect.width;
-      tb.h = ta.getBoundingClientRect().height;
+      tb.h = rect.height;
     });
     ro.observe(box);
 
@@ -858,6 +923,10 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
     let drag = null;
     top.addEventListener("pointerdown", (e) => {
       if (state.lock) return;
+
+      // If the user is editing the label OR clicking delete, don't start a drag.
+      if (e.target && e.target.closest && (e.target.closest(".chip") || e.target.closest(".xBtn"))) return;
+
       e.preventDefault();
       const layerRect = state.layers[which].getBoundingClientRect();
       const rect = box.getBoundingClientRect();
@@ -903,7 +972,8 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
       x: Math.max(8, x),
       y: Math.max(8, y),
       w: 260,
-      h: 70,
+      h: 160,
+      label: "",
       text: ""
     };
     side.textBoxes.push(tb);
@@ -1065,6 +1135,7 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
 
   function attachCanvas(canvas, which) {
     canvas.addEventListener("pointerdown", (e) => {
+      if (state.lock) return;
       // if text tool: place text box
       if (state.tool === "text") {
         if (state.lock) return;
@@ -1117,7 +1188,8 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
   function setLock(on) {
     state.lock = on;
     lockBtn.classList.toggle("toggle-on", on);
-    lockBtn.textContent = on ? "🔓 Unlock text" : "🔒 Lock text";
+    lockBtn.textContent = on ? "🔓 Unlock board" : "🔒 Lock board";
+    applyLockUI();
     renderAll();
   }
 
@@ -1125,6 +1197,30 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
     state.color = col;
     localStorage.setItem(KEY.color, col);
     swatches.forEach((b) => b.classList.toggle("active", b.dataset.col === col));
+  }
+
+  function applyLockUI(){
+    const locked = !!state.lock;
+
+    // Controls we freeze when locked (leave Save PNG + Flip + Lock itself available)
+    const disableEls = [
+      nameInput, nameSizeBtn, themeBtn,
+      penBtn, eraserBtn, textBtn,
+      sizeRange, eraserRange,
+      undoBtn, redoBtn, clearBtn
+    ];
+
+    disableEls.forEach(el => { if (el) el.disabled = locked; });
+
+    // Swatches are buttons
+    swatches.forEach(b => { b.disabled = locked; });
+
+    // "Open PNG" is a label wrapper; disable by class + disabling the actual file input
+    if (openLabel) openLabel.classList.toggle("disabled", locked);
+    if (loadInput) loadInput.disabled = locked;
+
+    // Give pupils a visual cue that the board is frozen
+    document.body.classList.toggle("board-locked", locked);
   }
 
   function updateUI() {
@@ -1135,36 +1231,40 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
     swatches.forEach((b) => b.classList.toggle("active", b.dataset.col === state.color));
 
     // lock label
-    lockBtn.textContent = state.lock ? "🔓 Unlock text" : "🔒 Lock text";
+    lockBtn.textContent = state.lock ? "🔓 Unlock board" : "🔒 Lock board";
 
-    // tool highlight is handled by setTool
+    // Apply enabled/disabled state to UI
+    applyLockUI();
   }
 
   // ---------- Buttons wiring ----------
-  penBtn.addEventListener("click", () => setTool("pen"));
-  eraserBtn.addEventListener("click", () => setTool("eraser"));
-  textBtn.addEventListener("click", () => setTool("text"));
+  penBtn.addEventListener("click", () => { if(state.lock) return; setTool("pen"); });
+  eraserBtn.addEventListener("click", () => { if(state.lock) return; setTool("eraser"); });
+  textBtn.addEventListener("click", () => { if(state.lock) return; setTool("text"); });
 
   lockBtn.addEventListener("click", () => setLock(!state.lock));
 
   sizeRange.addEventListener("input", () => {
+    if (state.lock) return;
     state.penSize = Number(sizeRange.value);
     localStorage.setItem(KEY.penSize, String(state.penSize));
     updateUI();
   });
 
   eraserRange.addEventListener("input", () => {
+    if (state.lock) return;
     state.eraserSize = Number(eraserRange.value);
     localStorage.setItem(KEY.eraserSize, String(state.eraserSize));
     updateUI();
   });
 
-  swatches.forEach((b) => b.addEventListener("click", () => setColor(b.dataset.col)));
+  swatches.forEach((b) => b.addEventListener("click", () => { if(state.lock) return; setColor(b.dataset.col); }));
 
-  undoBtn.addEventListener("click", () => applyUndo(state.active));
-  redoBtn.addEventListener("click", () => applyRedo(state.active));
+  undoBtn.addEventListener("click", () => { if(state.lock) return; applyUndo(state.active); });
+  redoBtn.addEventListener("click", () => { if(state.lock) return; applyRedo(state.active); });
 
   clearBtn.addEventListener("click", () => {
+    if (state.lock) return;
     const side = state.sides[state.active];
     const snap = snapshotSide(side);
     pushUndo(state.active, { type: "clear", payload: snap });
@@ -1181,16 +1281,18 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
   });
 
   themeBtn.addEventListener("click", () => {
+    if (state.lock) return;
     const next = state.theme === "dark" ? "light" : "dark";
     setTheme(next);
   });
 
   nameSizeBtn.addEventListener("click", () => {
+    if (state.lock) return;
     setBigName(!state.bigName);
     nameSizeBtn.textContent = state.bigName ? "🔎 Normal Name" : "🔎 Big Name";
   });
 
-  nameInput.addEventListener("input", () => setName(nameInput.value.trim()));
+  nameInput.addEventListener("input", () => { if(state.lock) return; setName(nameInput.value.trim()); });
 
   // ---------- Save / Load (PNG) ----------
   function exportCurrentPng() {
@@ -1228,16 +1330,25 @@ const which = state.active;
       // draw bubble
       octx.fillStyle = state.theme === "dark" ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.92)";
       octx.strokeStyle = state.theme === "dark" ? "rgba(255,255,255,0.20)" : "rgba(11,18,32,0.18)";
-      roundRect(octx, x, y, w, (tb.h + 34) * state.dpi, 14 * state.dpi);
+      roundRect(octx, x, y, w, tb.h * state.dpi, 14 * state.dpi);
       octx.fill();
       octx.stroke();
+
+
+      // draw label (editable chip)
+      const label = (tb.label || "").trim();
+      if (label) {
+        octx.fillStyle = state.theme === "dark" ? "rgba(255,255,255,0.92)" : "rgba(11,18,32,0.85)";
+        octx.font = `${14 * state.dpi}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
+        octx.fillText(label, x + padding, y + (8 * state.dpi));
+      }
 
       // draw text
       const text = (tb.text || "").trim();
       if (text) {
         octx.fillStyle = state.theme === "dark" ? "rgba(255,255,255,0.95)" : "rgba(11,18,32,0.95)";
         octx.font = `${18 * state.dpi}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
-        drawWrappedText(octx, text, x + padding, y + (24 * state.dpi), w - (2 * padding), 24 * state.dpi);
+        drawWrappedText(octx, text, x + padding, y + (34 * state.dpi), w - (2 * padding), 24 * state.dpi);
       }
     }
 
@@ -1270,6 +1381,7 @@ const which = state.active;
 
   // Load PNG onto current side (raster import)
   loadInput.addEventListener("change", async () => {
+    if (state.lock) { loadInput.value=""; return; }
     const file = loadInput.files && loadInput.files[0];
     if (!file) return;
 
@@ -1354,10 +1466,17 @@ const which = state.active;
 
   // ---------- Keyboard shortcuts ----------
   window.addEventListener("keydown", (e) => {
-    // avoid interfering when typing in a text box
-    const activeTag = document.activeElement && document.activeElement.tagName;
-    const typing = activeTag === "TEXTAREA" || activeTag === "INPUT";
+    // avoid interfering when typing in an input/textarea OR any contenteditable element (e.g. the editable label)
+    const ae = document.activeElement;
+    const activeTag = ae && ae.tagName;
+    const typing = (activeTag === "TEXTAREA" || activeTag === "INPUT" || (ae && ae.isContentEditable));
     const key = e.key.toLowerCase();
+
+    // When locked, freeze everything except Flip + Unlock
+    if (state.lock && (e.ctrlKey || e.metaKey) && (key === "z" || key === "y")) {
+      e.preventDefault();
+      return;
+    }
 
     if ((e.ctrlKey || e.metaKey) && key === "z") {
       e.preventDefault();
@@ -1371,6 +1490,12 @@ const which = state.active;
     }
 
     if (typing) return;
+
+    if (state.lock) {
+      if (key === "l") setLock(false);
+      if (key === "f") flipBtn.click();
+      return;
+    }
 
     if (key === "p") setTool("pen");
     if (key === "e") setTool("eraser");
@@ -1415,6 +1540,7 @@ const which = state.active;
     // default tool
     setTool("pen");
 
+    applyLockUI();
     renderAll();
   }
 
