@@ -723,15 +723,16 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
   }
 
   function boardBG() {
-    return state.theme === "dark" ? "rgba(8,10,14,1)" : "rgba(255,255,255,1)";
+    return state.theme === "dark" ? "rgba(11,18,32,1)" : "rgba(255,255,255,1)";
   }
 
   // ---------- Canvas sizing ----------
   function fitCanvas(canvas) {
-    const rect = canvas.getBoundingClientRect();
+    // Use layout metrics (clientWidth/clientHeight) rather than getBoundingClientRect(),
+    // because transforms (e.g., flip/3D) can skew bounding rects and cause warping.
     const dpr = state.dpi;
-    const w = Math.max(1, Math.round(rect.width * dpr));
-    const h = Math.max(1, Math.round(rect.height * dpr));
+    const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+    const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
     if (canvas.width !== w) canvas.width = w;
     if (canvas.height !== h) canvas.height = h;
   }
@@ -762,8 +763,9 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
     ctx.lineWidth = stroke.width;
 
     if (stroke.tool === "eraser") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.strokeStyle = "rgba(0,0,0,1)";
+      // Paint over with the board background colour (avoids transparency showing CSS/gradients behind the canvas)
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = boardBG();
     } else {
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = stroke.color;
@@ -1101,8 +1103,9 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
     ctx.lineWidth = stroke.width;
 
     if (stroke.tool === "eraser") {
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.strokeStyle = "rgba(0,0,0,1)";
+      // Paint over with the board background colour (avoids transparency showing CSS/gradients behind the canvas)
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = boardBG();
     } else {
       ctx.globalCompositeOperation = "source-over";
       ctx.strokeStyle = stroke.color;
@@ -1276,11 +1279,18 @@ document.title = name ? `Pupil Whiteboard — ${name}` : "Pupil Whiteboard";
   flipBtn.addEventListener("click", () => {
     const flipped = flipCard.classList.toggle("flipped");
     state.active = flipped ? "back" : "front";
-    // render to keep crisp after transform
-    setTimeout(renderAll, 40);
-  });
 
-  themeBtn.addEventListener("click", () => {
+    // Re-render AFTER the flip finishes. Rendering during the 3D transform can produce
+    // slightly different layout bounds, which makes the canvas appear stretched.
+    const onEnd = (e) => {
+      if (e && e.propertyName && e.propertyName !== "transform") return;
+      flipCard.removeEventListener("transitionend", onEnd);
+      // Two rAFs to ensure layout is settled
+      requestAnimationFrame(() => requestAnimationFrame(renderAll));
+    };
+    flipCard.addEventListener("transitionend", onEnd);
+  });
+themeBtn.addEventListener("click", () => {
     if (state.lock) return;
     const next = state.theme === "dark" ? "light" : "dark";
     setTheme(next);
@@ -1545,6 +1555,7 @@ const which = state.active;
   }
 
   init();
+  requestAnimationFrame(() => requestAnimationFrame(renderAll));
 })();
 
   </script>
